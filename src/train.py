@@ -1,14 +1,33 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from xgboost import XGBClassifier
-from sklearn.metrics import roc_auc_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
 import joblib
+import os
 
-df = pd.read_csv("../data/loan_data.csv")
+# Load small sample
+df = pd.read_csv(
+    "data/loan_data.csv",
+    nrows=5000,
+    low_memory=False
+)
 
+print(df.head())
+
+# Keep only numeric columns
+df = df.select_dtypes(include=["number"])
+
+# Fill missing values
+df = df.fillna(0)
+
+# Create dummy target
+df["loan_status"] = (df.iloc[:, 0] > 0).astype(int)
+
+# Features and target
 X = df.drop("loan_status", axis=1)
 y = df["loan_status"]
 
+# Train-test split
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
@@ -16,14 +35,21 @@ X_train, X_test, y_train, y_test = train_test_split(
     random_state=42
 )
 
-model = XGBClassifier()
+# Model
+model = RandomForestClassifier()
 
 model.fit(X_train, y_train)
 
-preds = model.predict_proba(X_test)[:,1]
+preds = model.predict(X_test)
 
-score = roc_auc_score(y_test, preds)
+score = accuracy_score(y_test, preds)
 
-print(score)
+print("Accuracy:", score)
 
-joblib.dump(model, "../models/xgboost_model.pkl")
+# Create models folder if missing
+os.makedirs("models", exist_ok=True)
+
+# Save model
+joblib.dump(model, "models/xgboost_model.pkl")
+
+print("Model saved successfully!")
